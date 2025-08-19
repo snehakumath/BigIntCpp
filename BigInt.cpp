@@ -1,3 +1,4 @@
+
 #include "BigInt.h"
 #include <iomanip>
 #include <algorithm>
@@ -113,43 +114,90 @@ bool BigInt::operator<(const BigInt &b) const {
     return false;
 }
 
-BigInt BigInt::operator+(const BigInt &b) const {
-    BigInt result;
-    result.digits.clear();
-    int carry = 0;
-    for (size_t i = 0; i < digits.size() || i < b.digits.size() || carry; ++i) {
-        int sum = carry;
-        if (i < digits.size()) sum += digits[i];
-        if (i < b.digits.size()) sum += b.digits[i];
-        result.digits.push_back(sum % BASE);
-        carry = sum / BASE;
-    }
-    result.removeLeadingZeros();
+BigInt BigInt::operator-() const {
+    BigInt result = *this;
+    if (!(digits.size() == 1 && digits[0] == 0))  // don't flip sign for zero
+        result.negative = !negative;
     return result;
 }
 
 BigInt BigInt::operator-(const BigInt &b) const {
-    if (*this < b) {
-        BigInt res = b - *this;
-        res.negative = true;
-        return res;
+    // Case 1: Different signs → subtraction becomes addition
+    if (this->negative != b.negative) {
+        return *this + (-b);
     }
+
+    // Case 2: Same sign → compare absolute values
+    if (absLess(*this, b)) {
+        // |a| < |b| → result is negative
+        return -(b - *this);
+    }
+
+    // Case 3: |a| >= |b|, perform digit-wise subtraction
     BigInt result;
     result.digits.clear();
     int borrow = 0;
+
     for (size_t i = 0; i < digits.size(); ++i) {
-        int diff = digits[i] - borrow;
-        if (i < b.digits.size()) diff -= b.digits[i];
+        int diff = digits[i] - borrow - (i < b.digits.size() ? b.digits[i] : 0);
         if (diff < 0) {
             diff += BASE;
             borrow = 1;
-        } else
+        } else {
             borrow = 0;
+        }
         result.digits.push_back(diff);
     }
+
+    result.negative = this->negative;
     result.removeLeadingZeros();
     return result;
 }
+
+bool BigInt::absLess(const BigInt &a, const BigInt &b) {
+    if (a.digits.size() != b.digits.size())
+        return a.digits.size() < b.digits.size();
+
+    for (int i = a.digits.size() - 1; i >= 0; --i) {
+        if (a.digits[i] != b.digits[i])
+            return a.digits[i] < b.digits[i];
+    }
+    return false; // equal
+}
+
+
+BigInt BigInt::operator+(const BigInt &b) const {
+    // Case 1: Same sign → regular addition
+    if (this->negative == b.negative) {
+        BigInt result;
+        result.negative = this->negative;  // both signs same, result has the same sign
+        result.digits.clear();
+
+        int carry = 0;
+        for (size_t i = 0; i < digits.size() || i < b.digits.size() || carry; ++i) {
+            int sum = carry;
+            if (i < digits.size()) sum += digits[i];
+            if (i < b.digits.size()) sum += b.digits[i];
+            result.digits.push_back(sum % BASE);
+            carry = sum / BASE;
+        }
+
+        result.removeLeadingZeros();
+        return result;
+    }
+
+    // Case 2: Signs differ → do subtraction: a + (-b) => a - b
+    if (this->negative) {
+        // (-a) + b == b - a
+        return b - (-(*this));
+    } else {
+        // a + (-b) == a - b
+        return *this - (-b);
+    }
+}
+
+
+
 BigInt BigInt::operator*(const BigInt &other) const {
     BigInt result;
     result.digits = karatsubaMultiply(this->digits, other.digits);
@@ -183,8 +231,4 @@ BigInt BigInt::operator/(int b) const {
     result.removeLeadingZeros();
     return result;
 }
-
-
-
-
 

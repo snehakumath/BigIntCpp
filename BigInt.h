@@ -13,6 +13,8 @@ private:
     bool negative;
 
     void removeLeadingZeros();
+    static bool absLess(const BigInt &a, const BigInt &b);
+
 
 public:
     BigInt(long long num = 0);
@@ -23,6 +25,7 @@ public:
 
     BigInt operator+(const BigInt &b) const;
     BigInt operator-(const BigInt &b) const;
+    BigInt operator-() const;   
     BigInt operator*(const BigInt &b) const;
 
     BigInt operator/(int b) const;  // only int division
